@@ -25,10 +25,10 @@ import java.util.Map;
 /**
  * Resource server configuration.
  *
- * Authentication is done by Keycloak (Authorization Code / OIDC flow on the frontend).
- * This application only validates the resulting JWT and maps its realm roles to
- * Spring Security authorities -- there is no application login endpoint and no
- * custom JWT code.
+ * Authentication is delegated to Keycloak: the frontends POST credentials to
+ * /api/auth/* (a public proxy to Keycloak's token/admin endpoints) and all
+ * other APIs carry the resulting Bearer JWT, which this application validates
+ * against the realm's JWKS. There is no custom JWT code.
  */
 @Configuration
 @EnableMethodSecurity
@@ -50,6 +50,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Public authentication endpoints (backend proxies Keycloak;
+                        // no redirect flow - the frontends only call these).
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/login", "/api/auth/refresh",
+                                "/api/auth/logout", "/api/auth/register").permitAll()
                         // "has the current user liked this blog" needs an identified user
                         .requestMatchers(HttpMethod.GET, "/api/blogs/*/likes/has").authenticated()
                         // Public, read-only content
