@@ -1,9 +1,9 @@
-# 📚 Book Management System
+# 📚 BukiMind
 > A modern full-stack digital library platform with AI-powered features
 
 <div align="center">
 
-![Book Management System](https://via.placeholder.com/800x400/4f46e5/ffffff?text=Book+Management+System)
+![BukiMind](https://via.placeholder.com/800x400/4f46e5/ffffff?text=BukiMind)
 
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -11,8 +11,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-Aiven_Cloud-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com/)
 
-**[🌐 Live Demo](https://book-management-frontend-ecru.vercel.app/)** •
-**[📖 API Docs](https://book-management-backend-d481.onrender.com/swagger-ui/index.html)** •
+**[🌐 Live Demo](https://bukimind-frontend-ecru.vercel.app/)** •
+**[📖 API Docs](https://bukimind-backend-d481.onrender.com/swagger-ui/index.html)** •
 **[🎥 Demo Video](https://www.youtube.com/watch?v=uis-1R07yUM)**
 
 </div>
@@ -34,7 +34,7 @@
 
 <div align="center">
 
-|               📚 Book Management               |     👤 User System    |         💬 Blog & Social         |     🤖 AI Assistant    |      ⭐ Review System       |
+|               📚 BukiMind                    |     👤 User System    |         💬 Blog & Social         |     🤖 AI Assistant    |      ⭐ Review System       |
 |:----------------------------------------------:| :-------------------: |:--------------------------------:| :--------------------: |:--------------------------:|
 |           CRUD + search + pagination           | JWT Auth + Role-based |   Blog posts & nested comments   | Chatbot & Smart search |   **Review & feedback**    |
 |                Favorites system                |   Profile management  |      Like / reply features       | Gemini API integration | **Toxic review detection** |
@@ -70,7 +70,7 @@
 
 | Feature / Action                 | 👑 Admin | 👤 Customer |
 |----------------------------------| :------: | :---------: |
-| **📚 Book Management**           |          |             |
+| **📚 BukiMind**           |          |             |
 | View/Search/Filter/Sort books    |     ✅    |      ✅      |
 | View book details                |     ✅    |      ✅      |
 | Add/Edit/Delete books            |     ✅    |      ❌      |
@@ -114,18 +114,26 @@
 ### 🔧 Backend Setup (Spring Boot)
 ```bash
 # Clone the repository
-git clone https://github.com/SmaugTHEDrag/book_management_backend.git
-cd book_management_backend
+git clone https://github.com/SmaugTHEDrag/bukimind-backend.git
+cd bukimind-backend
 
 # Install dependencies
 mvn clean install
 
+# Copy the environment template and fill in your own secrets
+cp .env.example .env
+
+# Start the infrastructure (PostgreSQL + Redis + Keycloak)
+docker compose up -d
+
 # Configure application.properties
-# Database Configuration (MySQL)
-spring.datasource.url=jdbc:mysql://localhost:3306/book_management or your_spring_datasource_url
-spring.datasource.username=root or your_spring_datasource_username
+# Database Configuration (PostgreSQL)
+spring.datasource.url=jdbc:postgresql://localhost:5433/bukimind or your_spring_datasource_url
+spring.datasource.username=bukimind or your_spring_datasource_username
 spring.datasource.password=your_password
-spring.jpa.hibernate.ddl-auto=update
+
+# Keycloak Resource Server (realm: bukimind, client: bukimind-frontend)
+spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:8180/realms/bukimind
 
 # Gemini API Configuration 
 gemini.api.key=your_gemini_api_key
@@ -168,8 +176,8 @@ uvicorn main:app --reload --port 8000
 ### 🎨 Frontend Setup
 ```bash
 # Clone the frontend repository
-git clone https://github.com/SmaugTHEDrag/book_management_frontend.git
-cd book_management_frontend
+git clone https://github.com/SmaugTHEDrag/bukimind-frontend.git
+cd bukimind-frontend
 
 # Install dependencies
 npm install
@@ -187,10 +195,10 @@ npm run dev
 <div align="center">
 
 ### 🌐 **Live Application**
-[![Frontend](https://img.shields.io/badge/Frontend-Vercel-00C7B7?style=for-the-badge&logo=vercel)](https://book-management-frontend-ecru.vercel.app/)
-[![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render)](https://book-management-backend-d481.onrender.com/swagger-ui/index.html)
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-00C7B7?style=for-the-badge&logo=vercel)](https://bukimind-frontend-ecru.vercel.app/)
+[![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render)](https://bukimind-backend-d481.onrender.com/swagger-ui/index.html)
 [![FastAPI](https://img.shields.io/badge/ML%20Service-Render-96EA2D?style=for-the-badge&logo=render)](https://simple-ai-moderation.onrender.com/docs)
-[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?style=for-the-badge&logo=swagger)](https://book-management-backend-d481.onrender.com/swagger-ui/index.html)
+[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?style=for-the-badge&logo=swagger)](https://bukimind-backend-d481.onrender.com/swagger-ui/index.html)
 
 ### 🎬 **Project Walkthrough**
 [![Watch the demo](https://img.youtube.com/vi/uis-1R07yUM/0.jpg)](https://www.youtube.com/watch?v=uis-1R07yUM)  

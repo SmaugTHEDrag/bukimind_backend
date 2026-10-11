@@ -1,0 +1,157 @@
+services:
+
+  # ============================================================
+  # PostgreSQL - BukiMind Application
+  # ============================================================
+  postgres:
+    image: postgres:17
+    container_name: bukimind-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bukimind}
+      POSTGRES_USER: ${POSTGRES_USER:-bukimind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bukimind-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-bukimind} -d ${POSTGRES_DB:-bukimind}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
+  # ============================================================
+  # PostgreSQL - Keycloak
+  # ============================================================
+  keycloak-postgres:
+    image: postgres:17
+    container_name: bukimind-keycloak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+    ports:
+      - "${KEYCLOAK_DB_HOST_PORT:-5434}:5432"
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    networks:
+      - bukimind-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB:-keycloak}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
+  # ============================================================
+  # Redis
+  # ============================================================
+  redis:
+    image: redis:8-alpine
+    container_name: bukimind-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    volumes:
+      - redis_data:/data
+    networks:
+      - bukimind-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+
+  # ============================================================
+  # RedisInsight - Development Only
+  # ============================================================
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: bukimind-redisinsight
+    restart: unless-stopped
+    ports:
+      - "${REDISINSIGHT_HOST_PORT:-5540}:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - bukimind-network
+    profiles:
+      - dev
+
+
+  # ============================================================
+  # Keycloak - Development
+  # ============================================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: bukimind-keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+    ports:
+      - "${KEYCLOAK_HOST_PORT:-8180}:8080"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    networks:
+      - bukimind-network
+
+
+# ==============================================================
+# Volumes
+# ==============================================================
+volumes:
+  postgres_data:
+    name: bukimind_postgres_data
+
+  keycloak_postgres_data:
+    name: bukimind_keycloak_postgres_data
+
+  redis_data:
+    name: bukimind_redis_data
+
+  redisinsight_data:
+    name: bukimind_redisinsight_data
+
+
+# ==============================================================
+# Network
+# ==============================================================
+networks:
+  bukimind-network:
+    name: bukimind-network
+    driver: bridge

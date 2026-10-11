@@ -1,4 +1,4 @@
-name: Book Management Backend CI
+name: BukiMind Backend CI
 
 on:
   push:
