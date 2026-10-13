@@ -2,14 +2,12 @@ package com.bukimind.common.security;
 
 import com.bukimind.user.entity.User;
 import com.bukimind.user.repository.IUserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-
 /**
  * The single place that turns the authenticated Keycloak token into an application user:
  *
@@ -34,7 +32,16 @@ public class CurrentUserService {
         Jwt jwt = currentToken();
 
         return userRepository.findByKeycloakUserId(jwt.getSubject())
-                .orElseGet(() -> userRepository.save(newUserFrom(jwt)));
+                .orElseGet(() -> createOrLoadUser(jwt));
+    }
+
+    private User createOrLoadUser(Jwt jwt) {
+        try {
+            return userRepository.save(newUserFrom(jwt));
+        } catch (DataIntegrityViolationException exception) {
+            return userRepository.findByKeycloakUserId(jwt.getSubject())
+                    .orElseThrow(() -> exception);
+        }
     }
 
     private Jwt currentToken() {
@@ -56,7 +63,6 @@ public class CurrentUserService {
         user.setEmail(email != null ? email : jwt.getSubject() + "@keycloak.local");
         user.setFullName(jwt.getClaimAsString(CLAIM_NAME));
         user.setStatus(User.STATUS_ACTIVE);
-        user.setLastLoginAt(LocalDateTime.now());
         return user;
     }
 }

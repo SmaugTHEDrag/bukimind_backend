@@ -1,5 +1,6 @@
 package com.bukimind.common.config;
 
+import com.bukimind.common.security.KeycloakUserSyncFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -36,6 +38,7 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final KeycloakJwtAuthenticationConverter keycloakJwtAuthenticationConverter;
+    private final KeycloakUserSyncFilter keycloakUserSyncFilter;
     private final ObjectMapper objectMapper;
 
     // Explicit frontend origins, e.g. "http://localhost:3000,https://app.example.com"
@@ -69,6 +72,7 @@ public class SecurityConfig {
                 )
                 // Spring Security rejects the request before any controller runs:
                 // answer with the same JSON shape as GlobalExceptionHandler.
+                .addFilterAfter(keycloakUserSyncFilter, BearerTokenAuthenticationFilter.class)
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required"))
