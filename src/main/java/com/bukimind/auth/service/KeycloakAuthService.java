@@ -3,17 +3,25 @@ package com.bukimind.auth.service;
 import com.bukimind.auth.dto.KeycloakTokenResponse;
 import com.bukimind.auth.dto.RegisterRequest;
 import com.bukimind.auth.dto.TokenResponse;
+import com.bukimind.auth.config.KeycloakProperties;
+import com.bukimind.common.exception.BadCredentialsException;
+import com.bukimind.common.exception.KeycloakIntegrationException;
+import com.bukimind.common.exception.UserAlreadyExistsException;
+import com.bukimind.user.entity.User;
+import com.bukimind.user.repository.IUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -47,10 +55,12 @@ public class KeycloakAuthService {
             };
 
     private final KeycloakProperties properties;
+    private final IUserRepository userRepository;
     private final RestClient restClient = RestClient.create();
 
-    public KeycloakAuthService(KeycloakProperties properties) {
+    public KeycloakAuthService(KeycloakProperties properties, IUserRepository userRepository) {
         this.properties = properties;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -126,14 +136,16 @@ public class KeycloakAuthService {
                 "lastName", request.lastName(),
                 "enabled", true,
                 "emailVerified", false,
+                "requiredActions", List.of("VERIFY_EMAIL"),
                 // A regular (non-temporary) password the user can log in with.
                 "credentials", List.of(Map.of(
                         "type", "password",
                         "value", request.password(),
                         "temporary", false)));
 
+        ResponseEntity<Void> creationResponse;
         try {
-            restClient.post()
+            creationResponse = restClient.post()
                     .uri(properties.getAdminRealmsUrl() + "/{realm}/users", properties.getRealm())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -154,9 +166,41 @@ public class KeycloakAuthService {
             throw new KeycloakIntegrationException("Registration failed - please try again later", ex);
         }
 
-        // Best effort role assignment: the account is usable either way, and any
-        // failure is logged loudly so it can be fixed in Keycloak.
-        assignCustomerRole(adminToken, request.username());
+        String userId = createdUserId(creationResponse.getHeaders().getLocation());
+        if (userId == null) {
+            log.warn("Keycloak did not return a user Location for '{}'; looking up the created user",
+                    request.username());
+            userId = findUserId(adminToken, request.username());
+        }
+        if (userId == null) {
+            log.error("Created user '{}' could not be resolved in Keycloak", request.username());
+            throw new KeycloakIntegrationException("Registration completed in Keycloak but could not be finalized");
+        }
+
+        userRepository.save(User.builder()
+                .keycloakUserId(userId)
+                .username(request.username())
+                .email(request.email())
+                .fullName(request.firstName() + " " + request.lastName())
+                .status(User.STATUS_ACTIVE)
+                .build());
+
+        // These follow-up actions are best effort; failures are logged by their respective methods.
+        assignCustomerRole(adminToken, userId, request.username());
+        sendVerificationEmail(adminToken, userId);
+    }
+
+    private String createdUserId(URI location) {
+        if (location == null || location.getPath() == null) {
+            return null;
+        }
+
+        String path = location.getPath();
+        int lastSlash = path.lastIndexOf('/');
+        if (lastSlash < 0 || lastSlash == path.length() - 1) {
+            return null;
+        }
+        return path.substring(lastSlash + 1);
     }
 
     /** Service-account token (client_credentials) for the backend client. */
@@ -198,12 +242,7 @@ public class KeycloakAuthService {
         }
     }
 
-    /**
-     * Assign the CUSTOMER realm role to the freshly created user by username.
-     * Role lookup failures are logged; the endpoint still succeeds because the
-     * account itself was created.
-     */
-    private void assignCustomerRole(String adminToken, String username) {
+    private String findUserId(String adminToken, String username) {
         try {
             List<Map<String, Object>> users = restClient.get()
                     .uri(properties.getAdminRealmsUrl()
@@ -217,10 +256,22 @@ public class KeycloakAuthService {
                     ? null
                     : String.valueOf(users.get(0).get("id"));
             if (userId == null || "null".equals(userId)) {
-                log.error("Created user '{}' not found in Keycloak - CUSTOMER role not assigned", username);
-                return;
+                return null;
             }
+            return userId;
+        } catch (RuntimeException ex) {
+            log.error("Failed to find created Keycloak user '{}': {}", username, ex.getMessage());
+            return null;
+        }
+    }
 
+    /**
+     * Assign the CUSTOMER realm role to the freshly created user.
+     * Role lookup failures are logged; the endpoint still succeeds because the
+     * account itself was created.
+     */
+    private void assignCustomerRole(String adminToken, String userId, String username) {
+        try {
             List<Map<String, Object>> realmRoles = restClient.get()
                     .uri(properties.getAdminRealmsUrl() + "/{realm}/roles", properties.getRealm())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
@@ -249,6 +300,21 @@ public class KeycloakAuthService {
                     .toBodilessEntity();
         } catch (RuntimeException ex) {
             log.error("Failed to assign {} role to '{}': {}", CUSTOMER_ROLE, username, ex.getMessage());
+        }
+    }
+
+    /** Send a verification email through the Keycloak Admin API. */
+    private void sendVerificationEmail(String adminToken, String userId) {
+        try {
+            restClient.put()
+                    .uri(properties.getAdminRealmsUrl()
+                                    + "/{realm}/users/{userId}/send-verify-email",
+                            properties.getRealm(), userId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RuntimeException ex) {
+            log.error("Failed to send Keycloak verification email for user '{}': {}", userId, ex.getMessage());
         }
     }
 
