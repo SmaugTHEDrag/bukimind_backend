@@ -1,18 +1,16 @@
 package com.bukimind.user.entity;
 
-import com.bukimind.blog.entity.Blog;
-import com.bukimind.blog.entity.BlogComment;
-import com.bukimind.blog.entity.BlogLike;
-import com.bukimind.favorite.entity.Favorite;
-import com.bukimind.review.entity.Review;
 import jakarta.persistence.*;
+import java.util.UUID;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.OffsetDateTime;
 
 /**
  * Application user.
@@ -27,6 +25,8 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 
     // values allowed by the users.status check constraint
@@ -34,8 +34,9 @@ public class User {
     public static final String STATUS_SUSPENDED = "SUSPENDED";
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
 
     @Column(name = "keycloak_user_id", nullable = false, unique = true, length = 255)
     private String keycloakUserId;
@@ -49,41 +50,48 @@ public class User {
     @Column(name = "full_name", length = 255)
     private String fullName;
 
-    @Column(name = "avatar_url", length = 500)
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(nullable = false, length = 20)
-    private String status;
-
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+    @Builder.Default
+    private String status = STATUS_ACTIVE;
 
     @Column(name = "created_at")
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @Column(name = "updated_at")
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
-    // One user can have many favorites;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Favorite> favorite;
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
 
-    // One user can have many blogs;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Blog> blogs;
+//    // One user can have many favorites;
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Favorite> favorite;
+//
+//    // One user can have many blogs;
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Blog> blogs;
+//
+//    // One user can like many blogs;
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<BlogLike> blogLikes;
+//
+//    // One user can comment on many blogs;
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<BlogComment> blogComments;
+//
+//    // One user can comment on many reviews;
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Review> reviews;
 
-    // One user can like many blogs;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BlogLike> blogLikes;
-
-    // One user can comment on many blogs;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BlogComment> blogComments;
-
-    // One user can comment on many reviews;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Review> reviews;
+    @PrePersist
+    protected void onCreate() {
+        if (this.status == null) {
+            this.status = STATUS_ACTIVE;
+        }
+    }
 }
-

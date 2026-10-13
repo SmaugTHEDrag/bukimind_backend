@@ -5,6 +5,7 @@ import com.bukimind.user.dto.UserPageResponse;
 import com.bukimind.user.dto.UserRequestDTO;
 import com.bukimind.user.form.UserFilterForm;
 import org.springframework.data.domain.Pageable;
+import java.util.UUID;
 
 public interface IUserService  {
 
@@ -12,12 +13,12 @@ public interface IUserService  {
     UserPageResponse getAllUsers(UserFilterForm form, Pageable pageable);
 
     // Get a user by ID
-    UserDTO getUserById(int id);
+    UserDTO getUserById(UUID id);
 
     // Update the application profile of an existing user
-    UserDTO updateUser(int id, UserRequestDTO userRequestDTO);
-
+    UserDTO updateUser(UUID id, UserRequestDTO userRequestDTO);
+    
     // Delete a user by ID
-    void deleteUser(int id);
+    void deleteUser(UUID id);
 }
 

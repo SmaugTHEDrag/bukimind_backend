@@ -4,6 +4,9 @@ import com.bukimind.user.dto.UserDTO;
 import com.bukimind.user.dto.UserPageResponse;
 import com.bukimind.user.dto.UserRequestDTO;
 import com.bukimind.user.entity.User;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
 import com.bukimind.common.exception.ResourceNotFoundException;
 import com.bukimind.user.form.UserFilterForm;
 import com.bukimind.user.mapper.UserMapper;
@@ -51,7 +54,7 @@ public class UserService implements IUserService{
 
     // Get a user by ID
     @Override
-    public UserDTO getUserById(int id) {
+    public UserDTO getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(()-> new ResourceNotFoundException("User not found"));
 
@@ -60,7 +63,7 @@ public class UserService implements IUserService{
 
     // Update the application profile of an existing user
     @Override
-    public UserDTO updateUser(int id, UserRequestDTO userRequestDTO) {
+    public UserDTO updateUser(UUID id, UserRequestDTO userRequestDTO) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new ResourceNotFoundException("User not found with id: "+id));
 
@@ -72,12 +75,12 @@ public class UserService implements IUserService{
 
     // Deletes user by ID
     @Override
-    public void deleteUser(int id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: "+id);
-        }
-        userRepository.deleteById(id);
+    public void deleteUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        user.setDeletedAt(OffsetDateTime.now());
+        user.setStatus(User.STATUS_SUSPENDED);
     }
 
 }
-

@@ -1,5 +1,5 @@
 package com.bukimind.user.controller;
-
+import java.util.UUID;
 import com.bukimind.user.dto.UserDTO;
 import com.bukimind.user.dto.UserPageResponse;
 import com.bukimind.user.dto.UserRequestDTO;
@@ -39,14 +39,14 @@ public class UserController {
     @Operation(summary = "Get user by ID", description = "Only admin can get user by ID")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable int id){
+    public ResponseEntity<UserDTO> getUserById(@PathVariable UUID id){
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @Operation(summary = "Update user profile", description = "Only admin can update a user profile")
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable int id, @RequestBody @Valid UserRequestDTO userRequestDTO){
+    public ResponseEntity<UserDTO> updateUser(@PathVariable UUID id, @RequestBody @Valid UserRequestDTO userRequestDTO){
         UserDTO updateUserDTO = userService.updateUser(id, userRequestDTO);
         return ResponseEntity.ok(updateUserDTO);
     }
@@ -54,7 +54,7 @@ public class UserController {
     @Operation(summary = "Delete user", description = "Only admin can delete user")
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("{id}")
-    public ResponseEntity<Object> deleteUser(@PathVariable int id){
+    public ResponseEntity<Object> deleteUser(@PathVariable UUID id){
         userService.deleteUser(id);
         return new ResponseEntity<>("Id: "+id+" is deleted", HttpStatus.OK);
     }

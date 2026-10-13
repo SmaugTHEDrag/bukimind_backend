@@ -2,6 +2,8 @@ package com.bukimind.user.form;
 
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
 public class UserFilterForm {
 
@@ -11,7 +13,6 @@ public class UserFilterForm {
     private String statusSearch;
 
     // ID range
-    private Integer minId;
-    private Integer maxId;
+    private UUID minId;
+    private UUID maxId;
 }
-
