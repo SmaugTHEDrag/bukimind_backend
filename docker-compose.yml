@@ -124,6 +124,8 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
     ports:
       - "${KEYCLOAK_HOST_PORT:-8180}:8080"
+    volumes:
+      - ./themes:/opt/keycloak/themes
     depends_on:
       keycloak-postgres:
         condition: service_healthy
